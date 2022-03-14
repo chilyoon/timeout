@@ -7,11 +7,12 @@ with open('token.txt') as f:
     token = f.read()
 
 intents = discord.Intents().all()
+#bot = discord.Client(command_prefix=['$',], intents=intents)
 bot = commands.Bot(command_prefix=['$',], intents=intents)
 
-VOTE_STATUS = {} # dictionary of, (Message)vote_message:(list)voted_users
+VOTE_STATUS = {} # dictionary of; (Message)vote_message:(list)voted_users
 
-async def vote_count(message, user_id, threshold=1):
+async def vote_count(message, user_id, threshold=3):
     if user_id in VOTE_STATUS[message]:
         # print('vote not counted')
         return
@@ -21,11 +22,12 @@ async def vote_count(message, user_id, threshold=1):
         # print('vote counted')
 
         if len(VOTE_STATUS) >= threshold:
+            VOTE_STATUS.pop(message)
             await begin_timeout(message)
 
 # Modification of @Rose's answer on https://stackoverflow.com/questions/70459488/discord-py-timeout-server-members
-def timeout_user(user_id, guild_id, duration):
-    url = "https://discord.com/api/v9/" + f'guilds/{guild_id}/members/{user_id}'
+async def timeout_user(user_id, guild_id, duration):
+    url = "https://discord.com/api/v8/" + f'guilds/{guild_id}/members/{user_id}'
     
     headers = {"Authorization": f"Bot {bot.http.token}"}
 
@@ -33,7 +35,8 @@ def timeout_user(user_id, guild_id, duration):
     json = {'communication_disabled_until': timeout}
 
     session = requests.patch(url, json=json, headers=headers)
-    # print(session.status_code)
+
+    #print(session.status_code)
 
 async def begin_timeout(message):
     guild_id = message.guild.id
@@ -41,7 +44,7 @@ async def begin_timeout(message):
     mentions = message.mentions
     for m in mentions:
         user_id = m.id
-        timeout_user(user_id, guild_id, 60)
+        await timeout_user(user_id, guild_id, 60)
 
 @bot.event
 async def on_ready():
