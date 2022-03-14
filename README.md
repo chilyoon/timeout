@@ -13,6 +13,9 @@ Every member in the text channel can participate in the vote by leaving reaction
 
 # Release Note
 
+## Plan for Version 0.1.2
+* Unnecessary messages from the bot should be deleted.
+
 ## Version 0.1.1
 * Send additional message if timeout was applied successfully.
 * "timeout" should not be able to timeout itself.
