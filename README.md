@@ -13,14 +13,17 @@ Every member in the text channel can participate in the vote by leaving reaction
 
 # Release Note
 
+## Plan for Version 0.1.3
+* More parameters will be able to be passed to set duration of timeout and minimum number of votes to initiate timeout.
+
 ## Version 0.1.2
 * Expired messages from the bot is now deleted automatically.
 
 ## Version 0.1.1
-* Send additional message if timeout was applied successfully.
-* "timeout" should not be able to timeout itself.
+* Send additional feedback message if timeout was applied successfully.
+* Bot can't timeout itself.
 
 ## Version 0.1.0
 * Implementation of basic features.
-* Minimum number of vote to initiate timeout is fixed to 3.
+* Minimum number of votes to initiate timeout is fixed to 3.
 * Timeout duration is fixed to 60 seconds.
