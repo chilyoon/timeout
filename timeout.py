@@ -13,15 +13,12 @@ bot = commands.Bot(command_prefix=['$',], intents=intents)
 VOTE_STATUS = {} # dictionary of; (Message)vote_message:(list)voted_users
 
 async def vote_count(message, user_id, threshold=3):
-    if user_id in VOTE_STATUS[message]:
-        # print('vote not counted')
-        return
-    
-    else:
-        VOTE_STATUS[message].append(user_id)
+    if user_id not in VOTE_STATUS[message]:
+
+        VOTE_STATUS[message].add(user_id)
         # print('vote counted')
 
-        if len(VOTE_STATUS) >= threshold:
+        if len(VOTE_STATUS[message]) >= threshold:
             VOTE_STATUS.pop(message)
             
             await begin_timeout(message)
@@ -73,7 +70,7 @@ async def on_message(message):
     
     if message.author == bot.user:
         if message.content.startswith('[VOTE HERE]'):
-            VOTE_STATUS[message] = []
+            VOTE_STATUS[message] = set()
         
         return
 
