@@ -11,7 +11,9 @@ to timeout all the listed users. This message is automatically and immediately r
 
 Every member in the text channel can participate in the vote by leaving reaction on this message.
 
-## Plan for 0.1.1 Update
+# Release Note
+
+## Version 0.1.1
 * Send additional message if timeout was applied successfully.
 * "timeout" should not be able to timeout itself.
 
