@@ -1,82 +1,132 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import datetime
 import requests
 
-with open('token.txt') as f:
-    token = f.read()
+
 
 intents = discord.Intents().all()
-#bot = discord.Client(command_prefix=['$',], intents=intents)
 bot = commands.Bot(command_prefix=['$',], intents=intents)
 
-VOTE_STATUS = {} # dictionary of; (Message)vote_message:(list)voted_users
-
-async def vote_count(message, user_id, threshold=3):
-    if user_id not in VOTE_STATUS[message]:
-
-        VOTE_STATUS[message].add(user_id)
-        # print('vote counted')
-
-        if len(VOTE_STATUS[message]) >= threshold:
-            VOTE_STATUS.pop(message)
-            
-            await begin_timeout(message)
-            
+VOTE_MSG_TO_TIMEOUT = {}
 
 # Modification of @Rose's answer on https://stackoverflow.com/questions/70459488/discord-py-timeout-server-members
-async def timeout_user(user_id, guild_id, duration):
+def timeout_user(bot, user_id, guild_id, expiration):
     url = "https://discord.com/api/v9/" + f'guilds/{guild_id}/members/{user_id}'
-    
-    headers = {"Authorization": f"Bot {bot.http.token}"}
 
-    timeout = (datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)).isoformat()
-    json = {'communication_disabled_until': timeout}
+    headers = {"Authorization": f"Bot {bot.http.token}"}
+    until = expiration.isoformat()
+    json = {'communication_disabled_until': until}
 
     session = requests.patch(url, json=json, headers=headers)
-
     return session.status_code
 
-    #print(session.status_code)
 
-async def begin_timeout(message):
-    guild_id = message.guild.id
 
-    mentions = message.mentions
-    for m in mentions:
-        if m == bot.user: continue
-
-        user_id = m.id
+class Timeout:
+    def __init__(self, bot, vote_message, **kwargs):
+        self.bot = bot
         
-        status = await timeout_user(user_id, guild_id, 60)
+        self.vote_message = vote_message
+        self.feedback_message = None
+        
+        self.target_users = vote_message.mentions
+        self.channel = vote_message.channel
+        self.guild = vote_message.guild
+        
+        self.expire_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=30)
 
-        if status == 200:
-            await message.channel.send("Timeout of " + m.mention + " has begun.")
+        self.options = {
+            'min_votes': 3,
+            'duration': 60,
+        }
+
+        for kw in kwargs:
+            if kw not in self.options:
+                raise ValueError
+            
+            self.options[kw] = kwargs[kw]
+
+        self.voted_users = set()
+
+    async def add_new_voter(self, user):
+        self.voted_users.add(user)
+
+        if len(self.voted_users) >= self.options['min_votes']:
+            await self.execute_timeout()
+
+    async def execute_timeout(self):
+        for user in self.target_users:
+            if user == self.bot.user: continue
+
+            # update expiration time
+            self.expire_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=self.options['duration'])
+            
+            status = timeout_user(self.bot, user.id, self.guild.id, self.expire_at)
+
+            if status == 200: # HTTP Patch success
+                self.feedback_message = await self.channel.send(f"Timeout of {user.mention} has begun.")
+            
+            # uncomment if necessary
+            '''
+            else:
+                self.feedback_message = await self.channel.send(f"Timeout of {user.mention} has been failed. (code: {status})")
+            '''
+
+    async def expire(self):
+        if datetime.datetime.utcnow() > self.expire_at:
+            if self.vote_message: await self.vote_message.delete()
+            if self.feedback_message: await self.feedback_message.delete()
+
+            return True
+        
         else:
-            await message.channel.send("Timeout of " + m.mention + " has been failed.")
+            return False
+
+
 
 @bot.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(bot))
 
 @bot.event
-async def on_message(message):    
+async def on_message(message):
+    # captures vote suggestion message    
     if message.content.startswith('$timeout'):
-        if message.mentions:
-            await message.channel.send('[VOTE HERE] Timeout ' + ''.join(m.mention for m in message.mentions))
-        
+        if message.mentions and bot.user not in message.mentions:
+            vote_message = await message.channel.send('[VOTE HERE] Timeout ' + ''.join(user.mention for user in message.mentions))
+
+            to = Timeout(bot, vote_message, min_votes=1, duration=10)
+            VOTE_MSG_TO_TIMEOUT[vote_message] = to
+
         await message.delete()
-        return
-    
-    if message.author == bot.user:
-        if message.content.startswith('[VOTE HERE]'):
-            VOTE_STATUS[message] = set()
-        
-        return
 
 @bot.event
 async def on_reaction_add(reaction, user):
-    if reaction.message in VOTE_STATUS:
-        await vote_count(reaction.message, user.id)
+    message = reaction.message
 
-bot.run(token)
+    if reaction.message in VOTE_MSG_TO_TIMEOUT:
+        to = VOTE_MSG_TO_TIMEOUT[message]
+        await to.add_new_voter(user)
+
+
+@tasks.loop(seconds=10)
+async def pool():
+    expired = []
+
+    for msg in VOTE_MSG_TO_TIMEOUT:
+        to = VOTE_MSG_TO_TIMEOUT[msg]
+
+        if await to.expire():
+            expired.append(msg)
+    
+    for msg in expired:
+        VOTE_MSG_TO_TIMEOUT.pop(msg)
+
+
+if __name__ == '__main__':
+    with open('token.txt') as f:
+        TOKEN = f.read()
+
+    pool.start()
+    bot.run(TOKEN)
