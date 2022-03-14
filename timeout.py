@@ -96,7 +96,10 @@ async def on_message(message):
         if message.mentions and bot.user not in message.mentions:
             vote_message = await message.channel.send('[VOTE HERE] Timeout ' + ''.join(user.mention for user in message.mentions))
 
-            to = Timeout(bot, vote_message, min_votes=1, duration=10)
+            min_votes = 3
+            duration = 60
+
+            to = Timeout(bot, vote_message, min_votes=min_votes, duration=duration)
             VOTE_MSG_TO_TIMEOUT[vote_message] = to
 
         await message.delete()
