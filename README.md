@@ -11,6 +11,10 @@ to timeout all the listed users. This message is automatically and immediately r
 
 Every member in the text channel can participate in the vote by leaving reaction on this message.
 
+## Plan for 0.1.1 Update
+* Send additional message if timeout was applied successfully.
+* "timeout" should not be able to timeout itself.
+
 ## Version 0.1.0
 * Implementation of basic features.
 * Minimum number of vote to initiate timeout is fixed to 3.
