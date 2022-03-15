@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import datetime
 import requests
-
+import re
 
 
 intents = discord.Intents().all()
@@ -15,13 +15,28 @@ def timeout_user(bot, user_id, guild_id, expiration):
     url = "https://discord.com/api/v9/" + f'guilds/{guild_id}/members/{user_id}'
 
     headers = {"Authorization": f"Bot {bot.http.token}"}
-    until = expiration.isoformat()
+    
+    if until != None: until = expiration.isoformat()
     json = {'communication_disabled_until': until}
 
     session = requests.patch(url, json=json, headers=headers)
     return session.status_code
 
+async def start_vote(message):
+    min_votes = 3
+    duration = 60
 
+    options = re.findall('(\-[a-z] \d*)', message.content)
+    for option in options:
+        opt, val = option.split()
+        if opt == '-t': duration = int(val)
+
+    vote_message = await message.channel.send(
+        f'''[VOTE HERE] Timeout {"".join(user.mention for user in message.mentions)} for {duration} seconds
+{min_votes} people must agree.''')
+
+    to = Timeout(bot, vote_message, min_votes=min_votes, duration=duration)
+    VOTE_MSG_TO_TIMEOUT[vote_message] = to
 
 class Timeout:
     def __init__(self, bot, vote_message, **kwargs):
@@ -54,6 +69,9 @@ class Timeout:
 
         if len(self.voted_users) >= self.options['min_votes']:
             await self.execute_timeout()
+    
+    async def remove_voter(self, user):
+        self.voted_users -= {user, }
 
     async def execute_timeout(self):
         for user in self.target_users:
@@ -66,18 +84,11 @@ class Timeout:
 
             if status == 200: # HTTP Patch success
                 self.feedback_message = await self.channel.send(f"Timeout of {user.mention} has begun.")
-            
-            # uncomment if necessary
-            '''
-            else:
-                self.feedback_message = await self.channel.send(f"Timeout of {user.mention} has been failed. (code: {status})")
-            '''
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
             if self.vote_message: await self.vote_message.delete()
             if self.feedback_message: await self.feedback_message.delete()
-
             return True
         
         else:
@@ -94,23 +105,24 @@ async def on_message(message):
     # captures vote suggestion message    
     if message.content.startswith('$timeout'):
         if message.mentions and bot.user not in message.mentions:
-            vote_message = await message.channel.send('[VOTE HERE] Timeout ' + ''.join(user.mention for user in message.mentions))
-
-            min_votes = 3
-            duration = 60
-
-            to = Timeout(bot, vote_message, min_votes=min_votes, duration=duration)
-            VOTE_MSG_TO_TIMEOUT[vote_message] = to
-
+            await start_vote(message)
         await message.delete()
 
 @bot.event
 async def on_reaction_add(reaction, user):
     message = reaction.message
 
-    if reaction.message in VOTE_MSG_TO_TIMEOUT:
+    if message in VOTE_MSG_TO_TIMEOUT:
         to = VOTE_MSG_TO_TIMEOUT[message]
         await to.add_new_voter(user)
+
+@bot.event
+async def on_reaction_remove(reaction, user):
+    message = reaction.message
+
+    if message in VOTE_MSG_TO_TIMEOUT:
+        to = VOTE_MSG_TO_TIMEOUT[message]
+        await to.remove_voter(user)
 
 
 @tasks.loop(seconds=10)
