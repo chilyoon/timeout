@@ -16,7 +16,7 @@ def timeout_user(bot, user_id, guild_id, expiration):
 
     headers = {"Authorization": f"Bot {bot.http.token}"}
     
-    if until != None: until = expiration.isoformat()
+    if expiration != None: until = expiration.isoformat()
     json = {'communication_disabled_until': until}
 
     session = requests.patch(url, json=json, headers=headers)
@@ -41,6 +41,8 @@ async def start_vote(message):
 class Timeout:
     def __init__(self, bot, vote_message, **kwargs):
         self.bot = bot
+
+        self.activated = True
         
         self.vote_message = vote_message
         self.feedback_message = None
@@ -68,6 +70,7 @@ class Timeout:
         self.voted_users.add(user)
 
         if len(self.voted_users) >= self.options['min_votes']:
+            self.activated = False
             await self.execute_timeout()
     
     async def remove_voter(self, user):
@@ -107,6 +110,12 @@ async def on_message(message):
         if message.mentions and bot.user not in message.mentions:
             await start_vote(message)
         await message.delete()
+    
+    text = re.findall('\$emoji ([a-z]+)', message.content)
+    if text:
+        emojis = [f':regional_indicator_{t}:' for t in text[0]]
+        await message.channel.send(''.join(emojis))
+        await message.delete()
 
 @bot.event
 async def on_reaction_add(reaction, user):
@@ -114,7 +123,7 @@ async def on_reaction_add(reaction, user):
 
     if message in VOTE_MSG_TO_TIMEOUT:
         to = VOTE_MSG_TO_TIMEOUT[message]
-        await to.add_new_voter(user)
+        if to.activated: await to.add_new_voter(user)
 
 @bot.event
 async def on_reaction_remove(reaction, user):
