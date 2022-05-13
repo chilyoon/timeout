@@ -109,13 +109,11 @@ async def on_message(message):
     if message.content.startswith('$timeout'):
         if message.mentions and bot.user not in message.mentions:
             await start_vote(message)
-        await message.delete()
     
     text = re.findall('\$emoji ([a-z]+)', message.content)
     if text:
         emojis = [f':regional_indicator_{t}:' for t in text[0]]
         await message.channel.send(''.join(emojis))
-        await message.delete()
 
 @bot.event
 async def on_reaction_add(reaction, user):
@@ -143,7 +141,7 @@ async def pool():
 
         if await to.expire():
             expired.append(msg)
-    
+
     for msg in expired:
         VOTE_MSG_TO_TIMEOUT.pop(msg)
 
