@@ -90,8 +90,8 @@ class Timeout:
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
-            if self.vote_message: await self.vote_message.delete()
-            if self.feedback_message: await self.feedback_message.delete()
+            if self.vote_message: await self.vote_message
+            if self.feedback_message: await self.feedback_message
             return True
         
         else:
@@ -139,8 +139,6 @@ async def pool():
     for msg in VOTE_MSG_TO_TIMEOUT:
         to = VOTE_MSG_TO_TIMEOUT[msg]
 
-        if await to.expire():
-            expired.append(msg)
 
     for msg in expired:
         VOTE_MSG_TO_TIMEOUT.pop(msg)
