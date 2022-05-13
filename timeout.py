@@ -32,8 +32,8 @@ async def start_vote(message):
         if opt == '-t': duration = int(val)
 
     vote_message = await message.channel.send(
-        f'''[VOTE HERE] Timeout {"".join(user.mention for user in message.mentions)} for {duration} seconds
-{min_votes} people must agree.''')
+        f'''{duration}초 내로 {"".join(user.mention for user in message.mentions)} 유저에 대한 타임아웃 투표를 하십시오.
+{min_votes}명 이상이 동의해야합니다.''')
 
     to = Timeout(bot, vote_message, min_votes=min_votes, duration=duration)
     VOTE_MSG_TO_TIMEOUT[vote_message] = to
@@ -86,7 +86,7 @@ class Timeout:
             status = timeout_user(self.bot, user.id, self.guild.id, self.expire_at)
 
             if status == 200: # HTTP Patch success
-                self.feedback_message = await self.channel.send(f"Timeout of {user.mention} has begun.")
+                self.feedback_message = await self.channel.send(f"{user.mention} 유저에게 타임아웃을 적용합니다.")
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
