@@ -7,7 +7,6 @@ import re
 
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix=['$', ], intents=intents)
-client = discord.client
 VOTE_MSG_TO_TIMEOUT = {}
 
 
