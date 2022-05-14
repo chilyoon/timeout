@@ -4,6 +4,25 @@ from discord.ext import commands, tasks
 import datetime
 import requests
 import re
+from word_detection import word_detection   #비속어 필터링
+
+a = word_detection()
+a.load_data()
+a.load_badword_data()
+
+def filter(message):        #비속어 필터링
+        word = str(message)
+        a.input = word
+        a.text_modification()
+        a.lime_compare(a.token_badwords, a.token_detach_text[0], 0.9)
+        result = a.result
+        a.lime_compare(a.new_token_badwords, a.token_detach_text[1], 0.9, True)
+        result += a.result
+        if len(result) == 0:
+            return False
+        else:
+            return True
+
 
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix=['$', ], intents=intents)
@@ -73,20 +92,28 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    # mute, umute command
-        if message.content.startswith('!mute'):
-            author = message.guild.get_member(int(message.content[6:24]))
-            role = discord.utils.get(message.guild.roles, name="Mute")
             channel = message.channel
-            await author.add_roles(role)
-            await channel.send('채팅을 차단합니다')
+            if message.author.bot:
+                return None
+            if filter(message.content)==True:
+                await channel.send(f'{message.author}의 채팅을 차단합니다')
 
-        if message.content.startswith('!umute'):
-            author = message.guild.get_member(int(message.content[7:25]))
-            role = discord.utils.get(message.guild.roles, name="Mute")
-            await author.remove_roles(role)
-            channel = message.channel
-            await channel.send('차단을 해제합니다')
+
+        # # mute, umute command
+        #     if message.content.startswith('!mute'):
+        #         author = message.guild.get_member(int(message.content[6:24]))
+        #         role = discord.utils.get(message.guild.roles, name="Mute")
+        #         channel = message.channel
+        #         await author.add_roles(role)
+        #         await channel.send('채팅을 차단합니다')
+        #
+        #     if message.content.startswith('!umute'):
+        #         author = message.guild.get_member(int(message.content[7:25]))
+        #         role = discord.utils.get(message.guild.roles, name="Mute")
+        #         await author.remove_roles(role)
+        #         channel = message.channel
+        #         await channel.send('차단을 해제합니다')
+
 
 
 @bot.event
