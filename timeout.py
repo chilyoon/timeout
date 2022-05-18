@@ -42,24 +42,6 @@ def timeout_user(bot, user_id, guild_id, expiration):
     return session.status_code
 
 
-# async def start_vote(message):
-#     min_votes = 3
-#     duration = 60
-
-    # options = re.findall('(\-[a-z] \d*)', message.content)
-    # for option in options:
-    #     opt, val = option.split()
-    #     if opt == '-t': duration = int(val)
-
-#     vote_message = await message.channel.send(
-#         f'''[VOTE HERE] Timeout {"".join(user.mention for user in message.mentions)} for {duration} seconds
-# {min_votes} people must agree.''')
-
-    # to = Timeout(bot, vote_message, min_votes=min_votes, duration=duration)
-    # VOTE_MSG_TO_TIMEOUT[vote_message] = to
-    # await to.add_new_voter()
-
-
 class Timeout:
     def __init__(self, bot, message, **kwargs):
         self.bot = bot
@@ -86,21 +68,10 @@ class Timeout:
 
             self.options[kw] = kwargs[kw]
 
-        # self.voted_users = set()
-
-    # async def add_new_voter(self):
-    #     # self.voted_users.add(user)
-    #     #
-    #     # if len(self.voted_users) >= self.options['min_votes']:
-    #     print("add_new_voter")
-    #     self.activated = False
-    #     await self.execute_timeout()
-
+    # 타임아웃 기능
     async def execute_timeout(self):
-        # for user in self.target_users:
         self.activated = False
         if self.target_users != self.bot.user:
-            # update expiration time
             self.expire_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=self.options['duration'])
 
             status = timeout_user(self.bot, self.target_users.id, self.guild.id, self.expire_at)
@@ -110,8 +81,7 @@ class Timeout:
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
-            #if self.message: await self.message.delete()
-            #if self.feedback_message: await self.feedback_message.delete() # 봇 메시지
+            # if self.feedback_message: await self.feedback_message.delete() # 봇 메시지
             return True
 
         else:
@@ -125,44 +95,12 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    # captures vote suggestion message
     if message.author.bot:
         return None
     if filter(message.content) == True:
         to = Timeout(bot, message)
         MSG_TO_TIMEOUT[message] = to
         await to.execute_timeout()      # 추가
-        # if message.mentions and bot.user not in message.mentions:
-            # await start_vote(message)
-        # await message.delete()
-
-
-
-    # text = re.findall('\$emoji ([a-z]+)', message.content)
-    # if text:
-    #     emojis = [f':regional_indicator_{t}:' for t in text[0]]
-    #     await message.channel.send(''.join(emojis))
-    #     await message.delete()
-
-
-# @bot.event
-# async def on_reaction_add():
-#     message = reaction.message
-#     if message in VOTE_MSG_TO_TIMEOUT:
-#         to = VOTE_MSG_TO_TIMEOUT[message]
-#         print(to)           #추가
-#         if to.activated:
-#             print("True")   #추가
-#             await to.add_new_voter()
-
-
-#@bot.event
-#async def on_reaction_remove(reaction, user):
-    #message = reaction.message
-
-    #if message in VOTE_MSG_TO_TIMEOUT:
-        #to = VOTE_MSG_TO_TIMEOUT[message]
-        #await to.remove_voter(user)
 
 
 @tasks.loop(seconds=10)
