@@ -26,7 +26,7 @@ def filter(message):        #비속어 필터링
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix=['$', ], intents=intents)
 
-VOTE_MSG_TO_TIMEOUT = {}
+MSG_TO_TIMEOUT = {}
 
 
 # Modification of @Rose's answer on https://stackoverflow.com/questions/70459488/discord-py-timeout-server-members
@@ -106,12 +106,12 @@ class Timeout:
             status = timeout_user(self.bot, self.target_users.id, self.guild.id, self.expire_at)
             users=self.target_users
             if status == 200:  # HTTP Patch success
-                self.feedback_message = await self.channel.send(f"Timeout of {users} has begun.")
+                self.feedback_message = await self.channel.send(f"{users} 에게 비속어 사용으로 인한 타임아웃을 적용합니다.")
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
-            if self.message: await self.message.delete()
-            if self.feedback_message: await self.feedback_message.delete()
+            #if self.message: await self.message.delete()
+            #if self.feedback_message: await self.feedback_message.delete() # 봇 메시지
             return True
 
         else:
@@ -130,7 +130,7 @@ async def on_message(message):
         return None
     if filter(message.content) == True:
         to = Timeout(bot, message)
-        VOTE_MSG_TO_TIMEOUT[message] = to
+        MSG_TO_TIMEOUT[message] = to
         await to.execute_timeout()      # 추가
         # if message.mentions and bot.user not in message.mentions:
             # await start_vote(message)
@@ -156,27 +156,27 @@ async def on_message(message):
 #             await to.add_new_voter()
 
 
-@bot.event
-async def on_reaction_remove(reaction, user):
-    message = reaction.message
+#@bot.event
+#async def on_reaction_remove(reaction, user):
+    #message = reaction.message
 
-    if message in VOTE_MSG_TO_TIMEOUT:
-        to = VOTE_MSG_TO_TIMEOUT[message]
-        await to.remove_voter(user)
+    #if message in VOTE_MSG_TO_TIMEOUT:
+        #to = VOTE_MSG_TO_TIMEOUT[message]
+        #await to.remove_voter(user)
 
 
 @tasks.loop(seconds=10)
 async def pool():
     expired = []
 
-    for msg in VOTE_MSG_TO_TIMEOUT:
-        to = VOTE_MSG_TO_TIMEOUT[msg]
+    for msg in MSG_TO_TIMEOUT:
+        to = MSG_TO_TIMEOUT[msg]
 
         if await to.expire():
             expired.append(msg)
 
     for msg in expired:
-        VOTE_MSG_TO_TIMEOUT.pop(msg)
+        MSG_TO_TIMEOUT.pop(msg)
 
 
 if __name__ == '__main__':
