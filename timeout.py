@@ -76,11 +76,12 @@ class Timeout:
             status = timeout_user(self.bot, self.target_users.id, self.guild.id, self.expire_at)
             users=self.target_users
             if status == 200:  # HTTP Patch success
-                self.feedback_message = await self.channel.send(f"{users} 에게 비속어 사용으로 인한 타임아웃을 적용합니다.")
+                self.feedback_message = await self.channel.send(f"{users}에게 비속어 사용으로 인한 타임아웃을 적용합니다.")
 
     async def expire(self):
         if datetime.datetime.utcnow() > self.expire_at:
-            # if self.feedback_message: await self.feedback_message.delete() # 봇 메시지
+            users = self.target_users
+            if self.feedback_message: await self.channel.send(f"{users.mention}에게 적용된 타임아웃을 해제합니다") # 봇 메시지
             return True
 
         else:
